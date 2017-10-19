@@ -1,0 +1,84 @@
+@charset "UTF-8";
+/* xDisplay Service CSS */
+
+/* Body */
+body {
+	height:100%;
+	overflow:hidden;
+	margin:2px 2px 2px 2px;
+	background-repeat: repeat;
+}
+
+/* P */
+p {
+	font-size: 14px;
+	font-weight: normal;
+	font-family: "Lucida Sans Unicode","Lucida Grande",sans-serif;
+}
+
+/* Message */
+.Message01 {
+	font-size: 18px;
+	font-family: "幼圆", "黑体",Tahoma, Geneva, sans-serif;
+	color: #000099;
+	font-weight: bold;
+	padding-top: 20px;
+}
+
+.Message02 {
+	font-size: 16px;
+	font-family: "幼圆", "黑体",Tahoma, Geneva, sans-serif;
+	font-weight: normal;
+	color: #000099;
+}
+
+/* Logo */
+.Logo {
+	font-size: 22px;
+	font-family: "Lucida Sans Unicode","Lucida Grande",sans-serif;
+	font-weight: normal;
+	color: #000099;
+	font-weight: bold;
+}
+.LogoX {
+	font-size: 32px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;	
+	color: Blue;
+}
+.LogoD {
+	font-size: 32px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;	
+	color:Red;
+}
+.LogoI {
+	font-size: 32px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;	
+	color:Green;
+}
+.LogoS {
+	font-size: 32px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;	
+	color:Orange;
+}
+.LogoPlay {
+	font-size: 32px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;	
+	color:Blue;
+}
+.LogoAt {
+	font-size: 26px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-weight: bold;	
+	color:Red;
+}
+.Foot {
+	font-size: 14px;
+	font-family: Tahoma, Geneva, sans-serif;
+	font-weight: bold;	
+	color: #009;
+}

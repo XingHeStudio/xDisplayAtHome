@@ -1,0 +1,58 @@
+#=========================================================================================#
+
+#系统信息
+<sys.ServiceName>XingHe Studio xDisplayAtHome Service</sys.ServiceName> #服务名称
+<sys.WebPageName>xDisplayAtHome Web Service</sys.WebPageName> #网页服务名称
+
+#=========================================================================================#
+
+#服务配置
+<sys.HttpPort>80</sys.HttpPort> #HTTP服务监听端口号（默认80）
+<sys.HttpService>True</sys.HttpService> #是否启用HTTP服务（默认True，启用Http服务）
+<sys.RtmpPort>1935</sys.RtmpPort> #RTMP服务监听端口号（默认1935）
+<sys.RtmpService>True</sys.RtmpService> #是否启用RTMP服务（默认True，启用Rtmp服务）
+
+#=========================================================================================#
+
+#系统路径
+<path.CnfFile>%apppath%cnffiles%|%</path.CnfFile> #系统配置目录
+<path.LogFile>%apppath%logfiles%|%</path.LogFile> #系统日志目录
+<path.WebRoot>%apppath%webroot%|%</path.WebRoot> #系统网页目录
+<path.Storage>%apppath%storage%|%</path.Storage> #系统媒体存储目录
+<path.Template>%apppath%webroot%|%</path.Template> #系统页面模板目录
+
+#=========================================================================================#
+
+#参数开关
+<sys.Log>True</sys.Log> #是否允许记录日志（默认True）
+<sys.EchoError>True</sys.EchoError> #是否输出错误（默认True）
+<sys.RefreshSetup>True</sys.RefreshSetup> #是否即时更新配置（默认False）
+<sys.FlashDebug>False</sys.FlashDebug> #是否显示调试信息（默认False）
+
+#=========================================================================================#
+
+#日志类型信息
+<log.HttpLog>Http.</log.HttpLog> #HTTP日志
+
+#=========================================================================================#
+
+#页面路径参数
+<web.Index>index</web.Index> #网页xDisplay路径（默认index）
+<web.xDisplay>xDisplay</web.xDisplay> #网页xDisplay路径（默认xDisplay）
+<web.RtmpRoot>xDisplay</web.RtmpRoot> #RTMP流媒体Root路径（默认xDisplay）
+<web.ClientXml>xClient.xml</web.ClientXml> #客户端播放器配置路径（默认xClient.xml）
+<web.ClientPage>xClient.html</web.ClientPage> #客户端播放器页面路径（默认xClient.html）
+<web.Message>Message</web.Message> #网页Message路径（默认message）
+
+#=========================================================================================#
+
+#显示类型相关设置
+<Type.Default>
+	<Stretch>False</Stretch> #初始化显示是否拉伸（True / False）
+	<ChkStretch>True</ChkStretch> #是否显示设置拉伸控件（True / False）
+	<Mute>False</Mute> #初始化静音（True / False）
+	<ChkMute>True</ChkMute> #是否显示设置静音控件（True / False）
+	<MsgReSize>True</MsgReSize> #是否显示调整窗口大小信息（True / False）
+</Type.Default>
+
+#=========================================================================================#

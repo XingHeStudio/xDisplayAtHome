@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+	<config>
+		#视频的名称
+		<Var.DateTime>2012-05-21 17:01:41.097</Var.DateTime>#视频Uid生成时间
+		<Var.Url>rtmp://127.0.0.1:2013/</Var.Url>#视频的Url
+		<Var.Did>65E8A90C39B39180FB8A32B52292636E1B7DABBF2D639AD5C0AEC64A54C15644032470BE</Var.Did>#视频的Did		
+		<Var.Stretch>True</Var.Stretch>#显示是否拉伸
+		<Var.ChkStretch>True</Var.ChkStretch>#是否显示拉伸选择控件
+		<Var.FlashDebug>True</Var.FlashDebug>#是否显示Flash调试信息
+	</config>

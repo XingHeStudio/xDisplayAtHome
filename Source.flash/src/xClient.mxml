@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   pageTitle="xDisplay Client"
+			   resize="app_resizeHandler(event)">
+
+	<fx:Declarations>
+		<mx:Fade id="fadeOut" duration="1000" alphaFrom="1.0" alphaTo="0.0"/>     
+		<mx:Fade id="fadeIn" duration="1000" alphaFrom="0.0" alphaTo="1.0"/>
+	</fx:Declarations>
+	
+	<mx:HBox id="videoBox" left="0" right="0" top="0" bottom="0" backgroundColor="#000005"
+			 color="#FFFFFF" horizontalCenter="0" horizontalScrollPolicy="off" verticalCenter="0"
+			 verticalScrollPolicy="off">
+		<s:VideoDisplay id="main" creationComplete="localCreated()" />
+	</mx:HBox>
+	
+	<s:Label id="showfw" left="0" right="0" bottom="0" height="48" mouseOver="showfw_mouseOverHandler(event)"/>
+
+	<s:Label id="log" left="0" right="0" bottom="0" height="32" color="#00B4BF" fontFamily="宋体"
+			 fontSize="13" hideEffect="{fadeOut}" horizontalCenter="0"
+			 mouseOut="log_mouseOutHandler(event)" showEffect="{fadeIn}" text=" xDisplay"
+			 verticalAlign="middle"/>
+
+	<s:Label id="fw" right="0" bottom="0" width="32" height="32" click="fw_clickHandler(event)"
+			 color="#00B4BF" fontSize="34" fontWeight="normal" hideEffect="{fadeOut}"
+			 showEffect="{fadeIn}" text="■" textAlign="center" toolTip="全屏 / 还原" verticalAlign="top"/>
+
+	<s:CheckBox id="tfls" right="90" bottom="0" width="55" height="32" label="拉伸"
+				change="tfls_changeHandler(event)" chromeColor="#00646A" color="#00B4BF"
+				enabled="true" focusColor="#79D8FF" fontFamily="宋体" fontSize="15"
+				fontStyle="normal" fontWeight="normal" hideEffect="{fadeOut}" selected="false"
+				showEffect="{fadeIn}" symbolColor="#00FF00" textDecoration="none"/>
+	
+	<s:CheckBox id="tfjy" right="32" bottom="0" width="55" height="32" label="静音"
+				change="tfjy_changeHandler(event)" chromeColor="#00646A" color="#00B4BF"
+				enabled="true" focusColor="#79D8FF" fontFamily="宋体" fontSize="15" fontStyle="normal"
+				fontWeight="normal" hideEffect="{fadeOut}" selected="false" showEffect="{fadeIn}"
+				symbolColor="#00FF00" textDecoration="none"/>
+	
+	<s:Button id="Test" right="5" top="5" width="58" height="21" label="Debug"
+			  click="Test_clickHandler(event)" toolTip="测试按钮"/>
+	
+	<fx:Script>
+		<![CDATA[
+
+			// xDisplay Service Client v5.04.20130615
+			// 星河创作室(XingHeStudio.com)
+			// Create by Stream.Wang 2012-05-10
+			// Modify by Stream.Wang 2013-06-15
+	
+			import mx.controls.Alert; 
+			import flash.events.TimerEvent;
+			import flash.utils.Timer;
+			
+			import mx.core.UIComponent;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			import mx.managers.ToolTipManager;
+			
+			[Bindable] private var nc:NetConnection;
+			[Bindable] private var ns:NetStream;
+			
+			private var params:Object;//取传入参数 
+
+			//内部延时计时器
+			protected var configXML: XML = new XML();	
+			private var remoteVideo:Video;
+			private var ChangeMoveTimer:Timer = new Timer(10000);//隐藏控件
+			private var PlayRtmpTimer:Timer = new Timer(1500);//延时播放
+
+			//输入参数HTML
+			private var xUid:String;//视频uid输入状态
+			//输入参数XML
+			private var xUrl:String;//视频Url输入状态
+			private var xDid:String;//视频Did输入状态
+			private var xLan:String;//系统语言输入状态			
+			//拉伸相关
+			private var xStretch:String;//视频xStretch输入状态
+			private var xChkStretch:String;//视频ChkStretch输入状态	
+			private var status_VisStretch : Boolean = true;//是否不按比例拉伸
+			//静音相关
+			private var xMute:String;//视频Mute输入状态
+			private var xChkMute:String;//视频ChkMute输入状态
+			private var status_VisMute : Boolean = true;//是否静音控件
+			//状态行相关
+			private var status_MsgReSize : Boolean = true;//是否显示调整窗口大小后信息
+			private var xMsgReSize:String;//视频MsgReSize输入状态
+			private var xFlashDebug : String;//是否显示调试信息			
+			//其他变量
+			private var status_ns : Boolean = false;//播放状态
+			private var xPx:int=0;//视频Parent.x状态
+			
+			//=================================================================================
+			//程序开始
+			
+			private function localCreated():void {
+				Test.visible=false;
+				tfls.visible=false;
+				tfjy.visible=false;
+				//开始获取参数
+				var args:Object = getParams();
+				//获取uid
+				xUid='';
+				if(args.uid != null) { 
+					xUid=args.uid;	 
+				}
+				xUid = xUid.replace(/^\s*|\s*$/g,"").split(" ").join(""); //去掉两边空格				
+				//获取系统显示语言
+				xLan='';
+				if(args.lan != null) { 
+					xLan=args.lan;	 
+				}
+				xLan = xLan.replace(/^\s*|\s*$/g,"").split(" ").join(""); //去掉两边空格
+				xLan = xLan.toLowerCase();
+				if (xLan==''){
+					xLan='chs';
+				} 
+					
+				//Alert.show("xClient.xml?uid="+xUid+'&number='+Math.random().toString()+'\nLanguage='+xLan);
+				var urlLoader:URLLoader = new URLLoader();
+				urlLoader.addEventListener(Event.COMPLETE, handleURLLoaderCompleted);
+				urlLoader.load( new URLRequest( "xClient.xml?uid="+xUid+'&num='+Math.random().toString() ) );
+			}
+		
+			private function handleURLLoaderCompleted(event:Event):void {
+				//读取XML
+				var loader:URLLoader = event.target as URLLoader;
+				configXML = XML(loader.data);
+				
+				xUrl = this.configXML.child("Var.Url").toString();
+				xDid = this.configXML.child("Var.Did").toString();
+				xUrl = xUrl.replace(/^\s*|\s*$/g,"").split(" ").join("");
+				xDid = xDid.replace(/^\s*|\s*$/g,"").split(" ").join("");
+
+				//拉伸控件状态				
+				xStretch = this.configXML.child("Var.Stretch").toString();
+				xStretch = xStretch.replace(/^\s*|\s*$/g,"").split(" ").join("");				
+				if (xStretch==''){
+					xStretch='False';
+				}
+				if (xStretch=='True'){
+					tfls.selected=true;
+				}
+				else {
+					tfls.selected=false;					
+				}
+				//是否显示拉伸控件
+				xChkStretch = this.configXML.child("Var.ChkStretch").toString();
+				xChkStretch = xChkStretch.replace(/^\s*|\s*$/g,"").split(" ").join("");
+				if (xChkStretch==''){
+					xChkStretch='True';
+				}				
+				//是否显示拉伸选择控件
+				if (xChkStretch=='True'){
+					status_VisStretch=true;//显示设置拉伸控件
+				}
+				else {
+					status_VisStretch=false;//隐藏设置拉伸控件				
+				}
+				tfls.visible=status_VisStretch;//设置显示或隐藏拉伸控件
+
+				//设置静音控件
+				xMute = this.configXML.child("Var.Mute").toString();
+				xMute = xMute.replace(/^\s*|\s*$/g,"").split(" ").join("");
+				if (xMute==''){
+					xMute='False';
+				}				
+				//是否静音
+				if (xMute=='True'){
+					tfjy.selected=true;//静音
+				}
+				else {
+					tfjy.selected=false;//不静音
+				}					
+				//设置是否显示静音控件
+				xChkMute = this.configXML.child("Var.ChkMute").toString();
+				xChkMute = xChkMute.replace(/^\s*|\s*$/g,"").split(" ").join("");
+				if (xChkMute==''){
+					xChkMute='True';
+				}				
+				//是否显示静音控件
+				if (xChkMute=='True'){
+					status_VisMute=true;//显示静音
+				}
+				else {
+					status_VisMute=false;//不显示静音
+				}					
+				tfjy.visible=status_VisMute;//设置显示或隐藏静音设置控件					
+
+				//是否显示调整窗口大小信息
+				xMsgReSize = this.configXML.child("Var.MsgReSize").toString();
+				xMsgReSize = xMsgReSize.replace(/^\s*|\s*$/g,"").split(" ").join("");
+				if (xMsgReSize==''){
+					xMsgReSize='True';
+				}				
+				if (xMsgReSize=='True'){
+					status_MsgReSize=true;//显示调整窗口大小后信息
+				}
+				else {
+					status_MsgReSize=false;//隐藏调窗口口大小后信息	
+				}		
+
+				//是否显示调试信息
+				xFlashDebug = this.configXML.child("Var.FlashDebug").toString();
+				xFlashDebug = xFlashDebug.replace(/^\s*|\s*$/g,"").split(" ").join("");
+				if (xFlashDebug==''){
+					xFlashDebug='True';
+				}				
+				if (xFlashDebug=='True'){
+					Test.visible=true;//显示调整窗口大小后信息
+				}
+				else {
+					Test.visible=false;//隐藏调窗口口大小后信息	
+				}		
+				
+				//整理控件位置
+				if (tfjy.visible==false){
+					tfls.right=tfjy.right;
+				}
+				//程序开始				
+				ChangeMoveTimer.addEventListener(TimerEvent.TIMER,LoadMove);
+				ChangeMoveTimer.stop();
+				PlayRtmpTimer.addEventListener(TimerEvent.TIMER,LoadPlay);
+				PlayRtmpTimer.stop()
+				this.addEventListener(Event.ADDED_TO_STAGE,onAddToStage)					
+				status_ns=false
+					
+				//开始自动播放
+				if (xUrl!='' && xDid!=''){
+					var ui:UIComponent = new UIComponent();				
+					remoteVideo = new Video(1,1);
+					ui.width = this.width;
+					ui.height = this.height;
+					remoteVideo.smoothing=true;
+					ui.addChild(remoteVideo);
+					this.videoBox.addChild(ui);
+					//设置屏幕左边偏倚
+					//xPx=remoteVideo.parent.x;
+					xPx=3.35;
+					//连接流媒体
+					connect(xUrl);
+					
+					PlayRtmpTimer.start();
+				}
+				else{
+					close();
+					debug('错误：连接终止！');
+				}
+			}
+			
+			private function onAddToStage(event:Event):void{
+				//添加全屏监听
+				stage.addEventListener(FullScreenEvent.FULL_SCREEN,fullScreenHandler);
+			}			
+			
+			private function netStatusHandler(event:NetStatusEvent):void 
+			{   //状态感知
+				//debug('连接状态:' + event.type + ' ' + event.info.code);
+				switch (event.info.code) {
+					case 'NetStream.Play.Start':
+						debug('连接状态:正在播放');
+						status_ns=true;
+						break;
+					case 'NetConnection.Connect.Success':
+						debug('连接状态:成功');
+						if (status_ns==false) {
+							PlayRtmpTimer.start();
+						}
+						break;
+					case 'NetConnection.Connect.Failed':
+						debug('连接状态:失败');
+						status_ns=false
+					case 'NetConnection.Connect.Reject':
+						debug('连接状态:拒绝');
+						status_ns=false						
+					case 'NetConnection.Connect.Closed':
+						debug('连接状态:关闭');
+						status_ns=false
+						nc = null;
+						closeStream();
+						break;
+				}
+			}
+			
+			private function LoadPlay(event:TimerEvent):void
+			{   //延时调用播放流媒体
+				if (nc.connected==true && status_ns!=true ){
+					play(xDid);
+					ChangeMoveTimer.start();
+				}
+			}
+			
+			private function LoadSize():void
+			{   
+				appV_resize(root.width,root.height);
+			}			
+			
+			private function LoadMove(event:TimerEvent):void
+			{   //隐藏控件
+				ChangeMoveTimer.stop();
+				log.visible= false;
+				tfls.visible= false;
+				tfjy.visible= false;
+				fw.visible=false;
+				log.text='';
+			}
+			
+			private function debug(msg:String):void 
+			{   //显示状态栏信息
+				if (log != null)
+					log.text = ' '+msg;
+				log.visible=true;
+				fw.visible=true;
+				tfjy.visible=status_VisMute;//设置显示或隐藏静音设置控件
+				tfls.visible=status_VisStretch;//设置显示或隐藏拉伸控件				
+				ChangeMoveTimer.start();
+			}
+			
+			protected function app_resizeHandler(event:ResizeEvent):void
+			{   //调用调整窗口大小
+				appV_resize(event.target.width,event.target.height)
+			}
+			
+			protected function app_mute(Mute:Boolean):void
+			{   //静音设置
+				var AppMute:SoundTransform = ns.soundTransform;   
+				if (Mute==true){
+					AppMute.volume = 0;//静音
+				}
+				else {
+					AppMute.volume = 1;//不静音					
+				}
+				ns.soundTransform = AppMute;
+			}
+			
+			protected function appV_resize(ax:int,ay:int):void
+			{   //调整窗口大小
+				if (tfls.selected==false){
+					if (ax/remoteVideo.videoWidth*remoteVideo.videoHeight<=ay ) {
+						remoteVideo.parent.width=ax;
+						remoteVideo.parent.height=ax/remoteVideo.videoWidth*remoteVideo.videoHeight;
+						remoteVideo.x=0;
+						remoteVideo.y=(ay-remoteVideo.parent.height)/2;
+					}
+					else{
+						remoteVideo.parent.height=ay;
+						remoteVideo.parent.width=ay/remoteVideo.videoHeight*remoteVideo.videoWidth;
+						remoteVideo.x=(ax-remoteVideo.parent.width)/2;
+						remoteVideo.y=0;
+					}
+					remoteVideo.x=0
+					remoteVideo.parent.x=0;
+					remoteVideo.parent.y=0;
+					remoteVideo.parent.width=remoteVideo.parent.width+(xPx*2);
+					remoteVideo.width=remoteVideo.parent.width;
+					remoteVideo.height=remoteVideo.parent.height;
+					//调整视频位置偏移量
+					remoteVideo.x=0-xPx;					
+					if (status_MsgReSize==true){
+						debug('调整大小(按比例缩放:'+String(ax)+'/'+String(ay)+')')
+					}
+				}
+				else {
+					remoteVideo.parent.width=ax;
+					remoteVideo.parent.height=ay;
+					remoteVideo.parent.x=0;
+					remoteVideo.parent.y=0;
+					remoteVideo.x=0;
+					remoteVideo.y=0;
+					remoteVideo.parent.width=remoteVideo.parent.width+(xPx*2);
+					remoteVideo.width=remoteVideo.parent.width;
+					remoteVideo.height=remoteVideo.parent.height;					
+					if (status_MsgReSize==true){
+						debug('调整大小(拉伸缩放:'+String(ax)+'/'+String(ay)+')')						
+					}
+				}
+				if (remoteVideo.width<3) {
+					setTimeout(LoadSize, 1000);
+				}
+			}
+			
+			private function connect(url:String):void 
+			{   //连接到rtmp服务
+				NetConnection.defaultObjectEncoding = ObjectEncoding.AMF0;
+				if (nc == null) {
+					nc = new NetConnection();
+					nc.addEventListener(NetStatusEvent.NET_STATUS, netStatusHandler, false, 0, true);
+					nc.addEventListener(IOErrorEvent.IO_ERROR, errorHandler, false, 0, true);
+					nc.addEventListener(SecurityErrorEvent.SECURITY_ERROR, errorHandler, false, 0, true);
+					nc.addEventListener(AsyncErrorEvent.ASYNC_ERROR, errorHandler, false, 0, true);
+					nc.client = {};
+					debug('正在连接...');
+					nc.connect(url);
+				}
+			}
+			
+			private function play(name:String):void 
+			{   //播放流媒体
+				if (ns == null && nc != null && nc.connected) {
+					ns = new NetStream(nc);
+					ns.addEventListener(NetStatusEvent.NET_STATUS, netStatusHandler, false, 0, true);
+					ns.addEventListener(IOErrorEvent.IO_ERROR, streamErrorHandler, false, 0, true);
+					ns.addEventListener(AsyncErrorEvent.ASYNC_ERROR, streamErrorHandler, false, 0, true);
+					ns.bufferTime=0;//设置缓存长度					
+					ns.client = {};
+					//是否静音
+					app_mute(tfjy.selected);
+					//开始播放
+					ns.play(name);
+					remoteVideo.attachNetStream(ns);
+					setTimeout(LoadSize, 2000);
+				}
+			}
+			
+			private function close():void 
+			{   //关闭媒体连接
+				debug('关闭连接');
+				if (nc != null) {
+					nc.close();
+					nc = null;
+					closeStream();
+				}
+			}
+			
+			private function closeStream():void 
+			{   //关闭流
+				if (ns != null) {
+					ns.close();
+					ns = null;
+				}
+				remoteVideo.clear();
+			}
+			
+			protected function fw_clickHandler(event:MouseEvent):void
+			{   //切换全屏和还原按钮
+				if (stage.displayState==StageDisplayState.FULL_SCREEN){
+					stage.displayState=StageDisplayState.NORMAL;
+					appV_resize(root.width,root.height);
+					return;
+				}
+				else {
+					stage.displayState=StageDisplayState.FULL_SCREEN;
+					appV_resize(Capabilities.screenResolutionX,Capabilities.screenResolutionY);
+					return;
+				}
+			}
+						
+			private function fullScreenHandler(event:FullScreenEvent):void
+			{   //全屏感知：处理全屏进入和退出
+				if (event.fullScreen)
+				{
+					//全屏状态
+					debug('全屏');
+				}else
+				{
+					//非全屏状态
+					stage.displayState=StageDisplayState.NORMAL;
+					appV_resize(root.width,root.height);
+					debug('还原');
+					return;					
+				}
+			}			
+			
+			protected function showfw_mouseOverHandler(event:MouseEvent):void
+			{   //鼠标移入显示控件
+				log.visible=true;
+				fw.visible=true;
+				tfjy.visible=status_VisMute;//设置显示或隐藏静音设置控件
+				tfls.visible=status_VisStretch;//设置显示或隐藏拉伸控件
+			}
+			
+			protected function log_mouseOutHandler(event:MouseEvent):void
+			{   //鼠标移出触发
+				ChangeMoveTimer.start();
+			}
+			
+			private function errorHandler(event:ErrorEvent):void
+			{	//错误处理
+				debug('错误:' + event.type + ' ' + event.text);
+				if (nc != null)
+					nc.close();
+				nc = null;
+				closeStream();
+			}
+			
+			private function streamErrorHandler(event:ErrorEvent):void 
+			{   //错误处理
+				debug('视频流错误:' + event.type + ' ' + event.text);
+				closeStream();
+			}
+			
+			private function getParams():Object 
+			{   //取url参数
+				params = {}; 
+				var query:String = ExternalInterface.call("window.location.search.substring", 1); 
+				if(query) { 
+					var pairs:Array = query.split("&"); 
+					for(var i:uint=0; i < pairs.length; i++) { 
+						var pos:int = pairs[i].indexOf("="); 
+						if(pos != -1) { 
+							var argname:String = pairs[i].substring(0, pos); 
+							var value:String = pairs[i].substring(pos+1); 
+							params[argname] = value; 
+						} 
+					} 
+				} 
+				var urlquery:String = ExternalInterface.call("window.location.href.toString", 1);				
+				if(urlquery) { 
+					params['urlstr'] = urlquery; 
+				} 
+				return params; 
+			} 
+			
+			protected function tfls_changeHandler(event:Event):void
+			{   //拉伸
+				appV_resize(root.width,root.height);
+			}
+			
+			protected function tfjy_changeHandler(event:Event):void
+			{   //静音
+				if (tfjy.selected==false) {
+					app_mute(false);//不静音
+					debug('音量:音量正常');
+				}
+				else{
+					app_mute(true);//静音
+					debug('音量:静音');
+				}
+			}
+
+			protected function Test_clickHandler(event:MouseEvent):void
+			{   //测试
+				Alert.show('Url= '+xUrl+xDid+
+					'\n'+
+					'\nroot= '+String(root.width)+':'+String(root.height)+
+					'\nstage= '+String(stage.width)+':'+String(stage.height)+
+					'\nremoteVideo.wh= '+String(remoteVideo.width)+':'+String(remoteVideo.height)+
+					'\nposition offset= '+String(xPx)+
+					'\n'+
+					'\nVer= v5.04.20130615'					
+				);
+			}
+			
+		]]>
+	</fx:Script>
+	
+</s:Application>
